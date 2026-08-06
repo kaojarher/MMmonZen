@@ -1,0 +1,887 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>凡人修仙傳 · 仙魔問道TCG</title>
+  <style>
+    :root {
+      --bg-color: #f4f6f9;
+      --card-bg: #ffffff;
+      --accent-color: #d97706; /* 仙金黃 */
+      --hp-color: #16a34a;
+      --energy-color: #0284c7; /* 靈氣藍 */
+      --trainer-color: #9333ea; /* 錦囊紫 */
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'PingFang TC', 'Microsoft JhengHei', sans-serif; }
+    body { background: var(--bg-color); color: #1e293b; display: flex; flex-direction: column; align-items: center; min-height: 100vh; padding: 15px; overflow-x: hidden; }
+
+    header { text-align: center; margin-bottom: 12px; }
+    header h2 { font-family: 'Kaiti', '標楷體', serif; letter-spacing: 2px; color: var(--accent-color); font-size: 1.8rem; text-shadow: 0 0 5px rgba(217,119,6,0.2); }
+    .stats-bar { display: flex; gap: 20px; background: #ffffff; padding: 8px 20px; border-radius: 20px; border: 1px solid #cbd5e1; font-weight: bold; font-size: 0.9rem; margin-top: 6px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+
+    .nav-tabs { display: flex; gap: 10px; margin-bottom: 15px; }
+    button { background: #ffffff; color: #334155; border: 1px solid #cbd5e1; padding: 8px 18px; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 0.9rem; transition: all 0.2s; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
+    button:hover { background: #f1f5f9; border-color: var(--accent-color); }
+    button.active { background: var(--accent-color); color: #ffffff; border-color: var(--accent-color); }
+    button:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    .view-container { width: 100%; max-width: 950px; display: none; }
+    .view-container.active { display: block; }
+
+    .card-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(125px, 1fr)); gap: 10px; padding: 5px; }
+
+    /* 基本修仙卡牌樣式（白色背景） */
+    .tcg-card {
+      width: 95px; height: 135px; background: linear-gradient(145deg, #ffffff, #f8fafc); color: #0f172a; border-radius: 8px; border: 2px solid #cbd5e1;
+      display: flex; flex-direction: column; justify-space-between; padding: 5px; position: relative;
+      cursor: pointer; user-select: none; transition: transform 0.2s, border-color 0.2s, box-shadow 0.2s; flex-shrink: 0;
+      overflow: hidden; box-shadow: 0 2px 5px rgba(0,0,0,0.08);
+    }
+    .tcg-card:hover { transform: translateY(-4px); box-shadow: 0 6px 12px rgba(0,0,0,0.12); }
+    .tcg-card.active-card { width: 110px; height: 155px; border-color: var(--accent-color); box-shadow: 0 0 15px rgba(217,119,6,0.3); }
+    .tcg-card.trainer { border-color: var(--trainer-color); }
+    .tcg-card.locked { filter: grayscale(100%) opacity(0.3); border-color: #cbd5e1 !important; transform: none; box-shadow: none !important; animation: none !important; }
+
+    /* ===== CSS 精靈圖 (Sprite Sheet) ===== */
+    .card-sprite {
+      width: 100%;
+      height: 139%;
+      background-image: url('Zen.png');
+      background-size: 700% 400%;
+      background-repeat: no-repeat;
+      border-radius: 4px;
+      display: inline-block;
+      flex-shrink: 0;
+    }
+
+    /* 精靈圖座標位移 */
+    .sprite-c1  { background-position: 0% 0%; }
+    .sprite-c2  { background-position: 16.666% 0%; }
+    .sprite-c3  { background-position: 50% 0%; }
+    .sprite-c4  { background-position: 66.666% 0%; }
+    .sprite-c5  { background-position: 83.333% 0%; }
+    .sprite-c6  { background-position: 0% 33.333%; }
+    .sprite-c7  { background-position: 16.666% 33.333%; }
+    .sprite-c8  { background-position: 50% 33.333%; }
+    .sprite-c9  { background-position: 66.666% 33.333%; }
+    .sprite-c10 { background-position: 83.333% 33.333%; }
+    .sprite-c11 { background-position: 0% 66.666%; }
+    .sprite-c12 { background-position: 33.333% 66.666%; }
+    .sprite-c13 { background-position: 50% 66.666%; }
+    .sprite-c14 { background-position: 66.666% 66.666%; }
+    .sprite-c15 { background-position: 83.333% 66.666%; }
+    .sprite-c16 { background-position: 16.666% 100%; }
+    .sprite-c17 { background-position: 33.333% 100%; }
+    .sprite-c18 { background-position: 50% 100%; }
+    .sprite-t1  { background-position: 66.666% 100%; }
+    .sprite-t2  { background-position: 100% 33.333%; }
+    
+    /* ===== 修仙等級 (境界) 標籤樣式 ===== */
+    .badge-rarity {
+      position: absolute;
+      top: 4px;
+      left: 4px;
+      font-size: 0.6rem;
+      font-weight: 900;
+      padding: 1px 5px;
+      border-radius: 4px;
+      z-index: 10;
+      color: #ffffff;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+      line-height: 1.2;
+    }
+    .badge-rarity.ur { background: linear-gradient(135deg, #e11d48, #9333ea); }
+    .badge-rarity.ssr { background: linear-gradient(135deg, #d97706, #f59e0b); }
+    .badge-rarity.sr { background: #9333ea; }
+    .badge-rarity.r { background: #0284c7; }
+    .badge-rarity.c { background: #64748b; }
+
+    .rarity-ur { border: 2px solid #ff007f !important; animation: urGlow 3s linear infinite; }
+    .rarity-ur::after {
+      content: ''; position: absolute; inset: -50%;
+      background: conic-gradient(from 0deg, transparent 0 300deg, rgba(255, 255, 255, 0.8) 360deg);
+      animation: urRotate 4s linear infinite; pointer-events: none; opacity: 0.35; mix-blend-mode: color-dodge;
+    }
+    @keyframes urGlow {
+      0% { filter: drop-shadow(0 0 6px #ff007f); border-color: #ff007f !important; }
+      33% { filter: drop-shadow(0 0 10px #00f0ff); border-color: #00f0ff !important; }
+      66% { filter: drop-shadow(0 0 6px #7f00ff); border-color: #7f00ff !important; }
+      100% { filter: drop-shadow(0 0 6px #ff007f); border-color: #ff007f !important; }
+    }
+    @keyframes urRotate { 100% { transform: rotate(360deg); } }
+
+    .rarity-ssr { border: 2px solid #d97706 !important; animation: ssrPulse 2s ease-in-out infinite alternate; }
+    @keyframes ssrPulse {
+      0% { box-shadow: 0 0 5px #d97706, inset 0 0 4px #f59e0b; border-color: #d97706 !important; }
+      100% { box-shadow: 0 0 14px #f59e0b, inset 0 0 8px #fbbf24; border-color: #f59e0b !important; }
+    }
+
+    .rarity-sr { border: 2px solid #9333ea !important; animation: srPulse 2.5s ease-in-out infinite alternate; }
+    @keyframes srPulse {
+      0% { box-shadow: 0 0 4px #9333ea; }
+      100% { box-shadow: 0 0 10px #a855f7; }
+    }
+
+    .rarity-r { border: 2px solid #0284c7 !important; box-shadow: 0 0 5px rgba(2, 132, 199, 0.2); }
+    .rarity-c { border: 2px solid #94a3b8 !important; }
+
+    .c-header { display: flex; justify-content: flex-end; font-size: 0.6rem; font-weight: bold; pointer-events: none; z-index: 1; color: #64748b; }
+    .c-emoji { font-size: 2rem; text-align: center; pointer-events: none; height: 42px; display: flex; align-items: flex-start; justify-content: center; z-index: 1; overflow: hidden; }
+    .tcg-card.active-card .c-emoji { height: 55px; }
+    .c-name { font-size: 0.68rem; text-align: center; font-weight: bold; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; pointer-events: none; z-index: 1; color: #0f172a; margin: 2px 0; }
+    .c-footer { display: flex; justify-content: space-between; font-size: 0.6rem; background: rgba(241,245,249,0.9); color: #334155; padding: 2px 4px; border-radius: 3px; pointer-events: none; z-index: 1; font-weight: bold; }
+    .badge-energy { position: absolute; top: -6px; right: -6px; background: var(--energy-color); color: #ffffff; border-radius: 50%; width: 18px; height: 18px; font-size: 0.65rem; font-weight: bold; display: flex; align-items: center; justify-content: center; z-index: 11; }
+    .badge-count { position: absolute; bottom: 4px; right: 4px; background: var(--accent-color); color: #ffffff; border-radius: 10px; padding: 1px 6px; font-size: 0.65rem; font-weight: bold; display: flex; align-items: center; justify-content: center; z-index: 11; }
+
+    /* 論道台 (對戰區) */
+    .playmat { background: #ffffff; border: 2px solid #cbd5e1; border-radius: 12px; padding: 12px; display: flex; flex-direction: column; gap: 10px; transition: transform 0.1s; box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
+    .field-section { display: flex; flex-direction: column; gap: 6px; background: #f8fafc; padding: 8px; border-radius: 8px; border: 1px solid #e2e8f0; }
+    .bench-grid { display: flex; gap: 8px; min-height: 100px; background: #ffffff; padding: 4px; border-radius: 6px; border: 1px dashed #cbd5e1; overflow-x: auto; align-items: center; }
+    .active-spot { display: flex; justify-content: center; align-items: center; min-height: 140px; }
+    .hand-container { display: flex; gap: 8px; overflow-x: auto; padding: 6px; background: #f1f5f9; border-radius: 8px; min-height: 140px; border: 1px solid #e2e8f0; }
+    .zone-title { font-size: 0.75rem; color: #64748b; font-weight: bold; }
+
+    .log-box { height: 90px; background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 6px; padding: 8px; font-family: monospace; font-size: 0.8rem; color: #334155; overflow-y: auto; }
+    
+    /* Modal 彈窗樣式 */
+    .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.4); backdrop-filter: blur(2px); justify-content: center; align-items: center; flex-direction: column; z-index: 100; }
+    .modal.active { display: flex; }
+    .modal-menu { background: #ffffff; padding: 20px; border-radius: 12px; border: 1px solid #cbd5e1; max-width: 320px; width: 90%; text-align: center; box-shadow: 0 10px 25px rgba(0,0,0,0.15); }
+    .modal-menu button { width: 100%; margin-top: 8px; padding: 10px; }
+
+    /* 法寶檢視視窗 */
+    .inspect-card-stage { perspective: 1200px; margin-bottom: 15px; }
+    .inspect-card-box {
+      width: 220px; height: 320px; background: #ffffff; color: #0f172a; border: 3px solid var(--accent-color);
+      border-radius: 12px; padding: 15px; display: flex; flex-direction: column; justify-content: space-between;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.15); position: relative; transform-style: preserve-3d;
+      transform: rotateX(0deg) rotateY(0deg) scale(1); transition: transform 0.15s ease-out, box-shadow 0.15s ease-out;
+      will-change: transform; overflow: hidden;
+    }
+    .inspect-card-box.trainer { border-color: var(--trainer-color); }
+    .inspect-header { display: flex; justify-content: space-between; font-size: 0.9rem; font-weight: bold; color: #64748b; position: relative; z-index: 1; }
+    .inspect-emoji { font-size: 5rem; text-align: center; margin: 10px 0; height: 100px; display: flex; align-items: flex-start; justify-content: center; position: relative; z-index: 1; overflow: hidden; }
+    .inspect-title { font-size: 1.2rem; font-weight: bold; text-align: center; color: var(--accent-color); margin-bottom: 5px; position: relative; z-index: 1; }
+    .inspect-desc { background: #f8fafc; padding: 8px; border-radius: 6px; font-size: 0.8rem; color: #334155; text-align: center; position: relative; z-index: 1; border: 1px solid #e2e8f0; }
+    .inspect-stats { display: flex; justify-content: space-around; background: #f1f5f9; padding: 8px; border-radius: 6px; font-size: 0.85rem; font-weight: bold; color: #0f172a; position: relative; z-index: 1; }
+
+    .inspect-card-shine {
+      position: absolute; inset: 0; z-index: 2; pointer-events: none; border-radius: 9px;
+      background: radial-gradient(circle at 50% 50%, rgba(255,255,255,0.6), rgba(255,255,255,0) 60%);
+      opacity: 0; transition: opacity 0.2s ease-out; mix-blend-mode: overlay;
+    }
+    .inspect-card-box:hover .inspect-card-shine { opacity: 1; }
+
+    .pack-container { width: 150px; height: 210px; background: linear-gradient(135deg, #ffffff, #f1f5f9); border-radius: 12px; margin: 0 auto 15px auto; display: flex; flex-direction: column; justify-content: flex-end; align-items: center; border: 2px solid var(--accent-color); box-shadow: 0 8px 20px rgba(0,0,0,0.08); cursor: pointer; transition: transform 0.2s; overflow: hidden; position: relative; }
+    .pack-container:hover { transform: scale(1.05); }
+    .pack-label { background: var(--accent-color); color: #ffffff; font-weight: bold; font-size: 0.75rem; padding: 4px 10px; border-radius: 20px; margin-bottom: 12px; box-shadow: 0 2px 6px rgba(0,0,0,0.1); }
+    .pack-animating { animation: packShake 0.6s ease-in-out infinite; }
+    
+    @keyframes packShake {
+      0% { transform: rotate(0deg) scale(1.05); }
+      20% { transform: rotate(-5deg) scale(1.1); }
+      40% { transform: rotate(5deg) scale(1.1); }
+      60% { transform: rotate(-5deg) scale(1.1); }
+      80% { transform: rotate(5deg) scale(1.1); }
+      100% { transform: rotate(0deg) scale(1); }
+    }
+
+    .card-appear { animation: cardPopIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
+    @keyframes cardPopIn {
+      0% { opacity: 0; transform: scale(0.3) translateY(50px); }
+      100% { opacity: 1; transform: scale(1) translateY(0); }
+    }
+
+    /* 列印樣式 */
+    #print-sheet { display: none; }
+    .print-page {
+      width: 297mm; height: 210mm; box-sizing: border-box; padding: 14mm 22.5mm;
+      display: grid; grid-template-columns: repeat(4, 63mm); grid-template-rows: repeat(2, 91mm);
+      justify-content: center; align-content: center; page-break-after: always;
+    }
+    .print-page.no-break { page-break-after: auto; }
+    .print-card {
+      width: 63mm; height: 91mm; box-sizing: border-box; border: 1px dashed #666;
+      background: #fff; color: #111; padding: 3mm; overflow: hidden;
+      display: flex; flex-direction: column; align-items: center; justify-content: space-between;
+    }
+    .print-card-blank { border: 1px dashed #ccc; }
+    .print-card-type { font-size: 11pt; font-weight: bold; color: #555; align-self: stretch; text-align: left; }
+    .print-card-img { width: 100%; height: 45mm; display: flex; align-items: flex-start; justify-content: center; font-size: 32pt; overflow: hidden; }
+    .print-card-name { font-size: 16pt; font-weight: bold; text-align: center; color: #000; }
+    .print-card-stats, .print-card-desc { font-size: 12pt; color: #333; text-align: center; }
+    .print-card-back {
+      width: 63mm; height: 91mm; box-sizing: border-box; border: 1px dashed #666;
+      overflow: hidden; display: flex; align-items: center; justify-content: center; background: #111; color: #e5b869; font-weight: bold; font-size: 20pt;
+    }
+    .print-card-blank-back { background-color: #fff; border: 1px dashed #ccc; }
+
+    @media print {
+      @page { size: A4 landscape; margin: 0; }
+      body * { visibility: hidden; }
+      #print-sheet, #print-sheet * { visibility: visible; }
+      #print-sheet { display: block !important; position: absolute; top: 0; left: 0; }
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <h2>⛩️ 凡人修仙傳 · 仙魔問道</h2>
+    <div class="stats-bar">
+      <span>💎 靈石: <span id="coin-count">100</span></span>
+      <span>📜 仙緣圖鑑: <span id="collection-count">0/60</span></span>
+    </div>
+    <div style="display:flex; gap:8px; margin-top:8px; justify-content:center;">
+      <button onclick="exportSave()" style="font-size:0.75rem; padding:6px 14px;">📤 拓印心法(匯出)</button>
+      <button onclick="document.getElementById('import-file-input').click()" style="font-size:0.75rem; padding:6px 14px;">📥 傳承心法(匯入)</button>
+      <input type="file" id="import-file-input" accept="application/json" style="display:none" onchange="importSave(event)">
+    </div>
+  </header>
+
+  <nav class="nav-tabs">
+    <button id="tab-shop" class="active" onclick="switchTab('shop')">🔮 仙緣尋寶</button>
+    <button id="tab-collection" onclick="switchTab('collection')">🎒 萬寶囊/坊市</button>
+    <button id="tab-battle" onclick="switchTab('battle')">⚔️ 仙魔論道</button>
+  </nav>
+
+  <!-- 1. 仙緣尋寶 -->
+  <main id="view-shop" class="view-container active">
+    <div style="text-align: center; padding: 30px 10px;">
+      <div id="pack-graphic" class="pack-container" onclick="openPack()">
+        <div style="font-size: 3.5rem; margin-top: auto; margin-bottom: 20px;">📜</div>
+        <div class="pack-label">✨ 獲得 3 機緣仙牌</div>
+      </div>
+      <div style="font-size: 0.9rem; font-weight: bold; margin-bottom: 10px; color: var(--accent-color);">🔮 洞天福地機緣寶袋</div>
+      <button id="btn-open-pack" onclick="openPack()" style="padding: 12px 30px; background: var(--accent-color); color: #fff; font-weight: bold;">開啟仙緣寶袋 (💎 10 靈石)</button>
+      <div style="margin-top: 15px;"><button onclick="addCoins(50)" style="font-size: 0.8rem;">采煉天地靈氣 (+50 靈石) 💎</button></div>
+    </div>
+  </main>
+
+  <!-- 2. 萬寶囊 -->
+  <main id="view-collection" class="view-container">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; background: #ffffff; padding: 10px 15px; border-radius: 8px; border: 1px solid #cbd5e1; flex-wrap: wrap; gap: 10px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+      <span style="color: #64748b; font-size: 0.85rem;">💡 點擊卡牌可檢視法寶神通，多餘重複法寶可於坊市出售 (每種固定保留1張)</span>
+      <div style="display:flex; gap:8px; flex-wrap:wrap;">
+        <button onclick="sellDuplicateCards()" style="background: var(--accent-color); color: #fff; font-weight: bold; border: none; padding: 8px 15px; border-radius: 6px;">
+          💎 坊市一鍵變現重複法寶
+        </button>
+        <button id="btn-print-cards" onclick="printAllCards()" disabled style="background: #16a34a; color: #fff; font-weight: bold; border: none; padding: 8px 15px; border-radius: 6px;">
+          🖨️ 列印全真修仙典籍 PDF
+        </button>
+      </div>
+    </div>
+    <div id="collection-grid" class="card-grid"></div>
+  </main>
+
+  <!-- 3. 仙魔論道 -->
+  <main id="view-battle" class="view-container">
+    <div id="playmat-box" class="playmat">
+      <div class="field-section">
+        <div class="zone-title">👹 敵對邪修 (手牌: <span id="e-hand-cnt">0</span> | 仙卡陣: <span id="e-deck-cnt">0</span> | 🏆 道果殘頁: <span id="e-prizes" style="color:#ef4444;">3</span>)</div>
+        <div class="bench-grid" id="e-bench"></div>
+        <div class="active-spot" id="e-active"></div>
+      </div>
+
+      <div class="log-box" id="game-log"></div>
+
+      <div style="display: flex; gap: 8px; flex-wrap: wrap; justify-content: center;">
+        <button id="btn-attach-energy" onclick="actionAttachEnergy()">⚡ 灌注天地靈氣 (限1次)</button>
+        <button id="btn-attack" style="background:var(--accent-color); color:#fff;" onclick="actionAttack()">⚔️ 運轉神通施法</button>
+        <button id="btn-end-turn" onclick="actionEndTurn()">➡️ 結束本次吐納</button>
+        <button onclick="initTCGBattle()">🔄 重置道場對決</button>
+      </div>
+
+      <div class="field-section">
+        <div class="active-spot" id="p-active"></div>
+        <div class="zone-title">護法備戰區 (最多5位護法/法寶)</div>
+        <div class="bench-grid" id="p-bench"></div>
+        <div class="zone-title">修仙者資訊 (仙卡陣: <span id="p-deck-cnt">0</span> | 🏆 道果殘頁: <span id="p-prizes" style="color:#16a34a;">3</span>)</div>
+        <div class="zone-title">手牌法寶 (點擊卡牌開啟祭出/進化選單)</div>
+        <div class="hand-container" id="p-hand"></div>
+      </div>
+    </div>
+  </main>
+
+  <!-- Modals -->
+  <div id="result-modal" class="modal">
+    <div class="modal-menu" style="max-width: 420px;">
+      <h2 style="color: var(--accent-color); margin-bottom: 20px;">🎉 獲得仙緣法寶！</h2>
+      <div id="drawn-cards" style="display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; margin-bottom: 20px;"></div>
+      <button onclick="closeModal()" style="padding: 10px 25px; background: var(--accent-color); color: #fff; font-weight: bold;">納入萬寶囊</button>
+    </div>
+  </div>
+
+  <div id="victory-modal" class="modal">
+    <div class="modal-menu" style="max-width: 380px;">
+      <h2 style="color: var(--accent-color); margin-bottom: 10px;">🏆 鬥法大勝！</h2>
+      <p style="margin-bottom: 15px; color: #475569;">閣下神通廣大，成功擊敗強敵！</p>
+      <div style="font-size: 1.1rem; background: rgba(217,119,6,0.1); padding: 10px; border-radius: 8px; margin-bottom: 15px; border: 1px solid var(--accent-color);">
+        獲得戰利品：<strong>💎 +30 靈石</strong>
+      </div>
+      <button onclick="rewardAndGoToShop()" style="background: var(--accent-color); color: #fff; font-weight: bold; padding: 12px;">尋找下一場仙緣 🔮</button>
+    </div>
+  </div>
+
+  <div id="action-modal" class="modal">
+    <div class="modal-menu">
+      <h3 id="action-card-title" style="margin-bottom:12px; color:var(--accent-color);">選擇祭出動作</h3>
+      <div id="action-buttons-container"></div>
+      <button onclick="closeActionModal()" style="background:#64748b; color:#fff; margin-top:12px;">取消</button>
+    </div>
+  </div>
+
+  <div id="inspect-modal" class="modal">
+    <div id="inspect-card-stage" class="inspect-card-stage">
+      <div id="inspect-card-content" class="inspect-card-box"></div>
+    </div>
+    <button onclick="closeInspectModal()" style="padding: 10px 30px; background: #0f172a; color: #fff; font-weight: bold; border-radius: 8px;">收回神識</button>
+  </div>
+
+  <div id="print-sheet"></div>
+
+  <script>
+    const CARD_DATABASE = [
+      { id: 'c1', name: '噬金蟲', emoji: '🦗', rarity: 'C', spriteClass: 'sprite-c1', type: '木靈', stage: '煉氣期', hp: 60, maxHp: 60, atk: 20, energyReq: 1, value: 3, desc: '奇蟲榜上有名之異蟲，無物不啃，繁殖極快。' },
+      { id: 'c2', name: '成熟期噬金蟲', emoji: '🦂', rarity: 'SR', spriteClass: 'sprite-c2', type: '木靈', stage: '築基期', evolvesFrom: '噬金蟲', hp: 120, maxHp: 120, atk: 50, energyReq: 2, value: 8, desc: '軀體堅如金剛，可吞噬五行法力與飛劍。' },
+      { id: 'c3', name: '玄天仙藤', emoji: '🌿', rarity: 'C', spriteClass: 'sprite-c3', type: '木靈', stage: '煉氣期', hp: 70, maxHp: 70, atk: 25, energyReq: 1, value: 3, desc: '界面誕生初期萌發之仙藤，蘊含天地法則。' },
+      { id: 'c4', name: '玄天斬靈劍', emoji: '🗡️', rarity: 'R', spriteClass: 'sprite-c4', type: '木靈', stage: '築基期', evolvesFrom: '玄天仙藤', hp: 140, maxHp: 140, atk: 60, energyReq: 2, value: 12, desc: '吸收仙藤精華化出之玄天之寶，斬斷虛空法則。' },
+      { id: 'c5', name: '青元劍仙', emoji: '🧙‍♂️', rarity: 'SSR', spriteClass: 'sprite-c5', type: '木靈', stage: '煉氣期', hp: 80, maxHp: 80, atk: 30, energyReq: 2, value: 15, desc: '修煉青元劍訣之大能，揮手即是萬道青竹蜂雲劍光。' },
+
+      { id: 'c6', name: '火彈術', emoji: '🔥', rarity: 'C', spriteClass: 'sprite-c6', type: '火靈', stage: '煉氣期', hp: 50, maxHp: 50, atk: 30, energyReq: 1, value: 3, desc: '基礎五行法術，經由高階修仙者凝練威力不俗。' },
+      { id: 'c7', name: '三真七陽火', emoji: '☀️', rarity: 'SR', spriteClass: 'sprite-c7', type: '火靈', stage: '築基期', evolvesFrom: '火彈術', hp: 130, maxHp: 130, atk: 70, energyReq: 2, value: 10, desc: '霸道無匹的至陽真火，能將山石頃刻融為赤融精血。' },
+      { id: 'c8', name: '赤鴉傀儡', emoji: '🦅', rarity: 'C', spriteClass: 'sprite-c8', type: '火靈', stage: '煉氣期', hp: 60, maxHp: 60, atk: 25, energyReq: 1, value: 3, desc: '千竹教流傳之傀儡獸，噴吐烈焰焚燒強敵。' },
+      { id: 'c9', name: '朱雀環', emoji: '⭕', rarity: 'R', spriteClass: 'sprite-c9', type: '火靈', stage: '築基期', evolvesFrom: '赤鴉傀儡', hp: 110, maxHp: 110, atk: 60, energyReq: 2, value: 8, desc: '古寶級火系法寶，環扣之處幻化出火鳳之影。' },
+      { id: 'c10', name: '乾天太彌火神', emoji: '👑', rarity: 'UR', spriteClass: 'sprite-c10', type: '火靈', stage: '煉氣期', hp: 100, maxHp: 100, atk: 50, energyReq: 2, value: 25, desc: '化神期大能凝聚之法身，降下焚天滅世之火。' },
+
+      { id: 'c11', name: '冰蛟靈血', emoji: '💧', rarity: 'C', spriteClass: 'sprite-c11', type: '水靈', stage: '煉氣期', hp: 70, maxHp: 70, atk: 20, energyReq: 1, value: 3, desc: '深海冰蛟之精血，帶有刺骨寒意。' },
+      { id: 'c12', name: '寒焰巨魔', emoji: '👹', rarity: 'SSR', spriteClass: 'sprite-c12', type: '水靈', stage: '築基期', evolvesFrom: '冰蛟靈血', hp: 150, maxHp: 150, atk: 60, energyReq: 3, value: 18, desc: '融合乾藍冰焰之法相，寒氣過處大地結凍。' },
+      { id: 'c13', name: '闢藍天羅扇', emoji: '🪭', rarity: 'C', spriteClass: 'sprite-c13', type: '水靈', stage: '煉氣期', hp: 50, maxHp: 50, atk: 20, energyReq: 1, value: 3, desc: '揮動間可捲起巨浪怒濤之水系法寶。' },
+      { id: 'c14', name: '乾藍冰焰龍', emoji: '🐉', rarity: 'R', spriteClass: 'sprite-c14', type: '水靈', stage: '築基期', evolvesFrom: '闢藍天羅扇', hp: 120, maxHp: 120, atk: 65, energyReq: 2, value: 8, desc: '極寒之極幻化出之冰龍，專凍人元神肉身。' },
+      { id: 'c15', name: '太陰真精', emoji: '🧊', rarity: 'UR', spriteClass: 'sprite-c15', type: '水靈', stage: '煉氣期', hp: 90, maxHp: 90, atk: 45, energyReq: 2, value: 25, desc: '天地純陰氣息匯聚而成，化神大能趨之若鶩。' },
+
+      { id: 'c16', name: '辟邪神雷', emoji: '⚡', rarity: 'C', spriteClass: 'sprite-c16', type: '雷靈', stage: '煉氣期', hp: 50, maxHp: 50, atk: 35, energyReq: 1, value: 3, desc: '克制世間一切魔氣煞氣之金金色神雷。' },
+      { id: 'c17', name: '雷萬天尊', emoji: '⚡', rarity: 'SSR', spriteClass: 'sprite-c17', type: '雷靈', stage: '築基期', evolvesFrom: '辟邪神雷', hp: 110, maxHp: 110, atk: 80, energyReq: 2, value: 18, desc: '掌天劫九霄神雷之尊者，神威不可逼視。' },
+      { id: 'c18', name: '紫霄雷豹', emoji: '🐆', rarity: 'R', spriteClass: 'sprite-c18', type: '雷靈', stage: '煉氣期', hp: 65, maxHp: 65, atk: 30, energyReq: 1, value: 5, desc: '渡劫時吸收紫電所化之靈獸，速度極快。' },
+
+      { id: 't1', name: '掌天瓶靈液', emoji: '🍶', rarity: 'SR', spriteClass: 'sprite-t1', type: '錦囊妙策', isTrainer: true, effect: 'draw3', description: '抽 3 張仙卡', value: 8, desc: '綠瓶凝聚天地日月精華之靈液，加速仙卡巡演。' },
+      { id: 't2', name: '培元丹', emoji: '💊', rarity: 'R', spriteClass: 'sprite-t2', type: '錦囊妙策', isTrainer: true, effect: 'heal60', description: '回復論道場護法 60 血氣', value: 5, desc: '上好渡劫保命丹藥，瞬間修復真元傷勢。' }
+    ];
+
+    const rarities = ['C', 'C', 'C', 'R', 'R', 'SR', 'SSR', 'UR'];
+    while (CARD_DATABASE.length < 60) {
+      const idx = CARD_DATABASE.length + 1;
+      const base = CARD_DATABASE[(idx - 1) % 20];
+      const r = rarities[Math.floor(Math.random() * rarities.length)];
+      CARD_DATABASE.push({ ...base, id: 'c_auto_' + idx, rarity: r, desc: `修仙界仙典秘錄第 ${idx} 卷遺留之法寶靈契。` });
+    }
+
+    let playerData = { coins: 100, inventory: {} };
+    let gameState = {};
+    let isOpeningPack = false;
+
+    function initGame() {
+      const saved = localStorage.getItem('xiuxian_tcg_full_v1');
+      if (saved) playerData = JSON.parse(saved);
+      
+      if (Object.keys(playerData.inventory).length === 0) {
+        for (let i = 0; i < 10; i++) playerData.inventory[CARD_DATABASE[i].id] = 1;
+        saveData();
+      }
+      updateUI();
+    }
+
+    function saveData() { localStorage.setItem('xiuxian_tcg_full_v1', JSON.stringify(playerData)); }
+
+    function exportSave() {
+      const dataStr = JSON.stringify(playerData, null, 2);
+      const blob = new Blob([dataStr], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      const today = new Date().toISOString().slice(0, 10);
+      a.href = url;
+      a.download = `凡人修仙傳_修仙存檔_${today}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }
+
+    function importSave(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        try {
+          const parsed = JSON.parse(e.target.result);
+          if (!parsed || typeof parsed !== 'object' || typeof parsed.inventory !== 'object') throw new Error();
+          if (typeof parsed.coins !== 'number') parsed.coins = 0;
+          playerData = parsed;
+          saveData();
+          updateUI();
+          renderCollection();
+          alert('✅ 仙緣傳承成功！');
+        } catch (err) {
+          alert('❌ 傳承失敗，心法殘頁損毀 (格式不符)。');
+        } finally {
+          event.target.value = '';
+        }
+      };
+      reader.readAsText(file);
+    }
+
+    function getXiuxianRarityText(r) {
+      switch(r) {
+        case 'UR': return '化神';
+        case 'SSR': return '元嬰';
+        case 'SR': return '金丹';
+        case 'R': return '築基';
+        default: return '煉氣';
+      }
+    }
+
+    /* 核心修正：正確產生卡牌 DOM 與階級標籤 */
+    function createCardDOM(card, count = 0, isLocked = false, isTradeable = false, isActive = false) {
+      const el = document.createElement('div');
+      const rKey = (card.rarity || 'C').toLowerCase();
+      const rClass = `rarity-${rKey}`;
+      el.className = `tcg-card ${rClass} ${isActive ? 'active-card' : ''} ${card.isTrainer ? 'trainer' : ''} ${isLocked ? 'locked' : ''}`;
+      
+      const rText = getXiuxianRarityText(card.rarity);
+      const rarityBadge = `<div class="badge-rarity ${rKey}">${rText}</div>`;
+      const spriteContent = card.spriteClass ? `<div class="card-sprite ${card.spriteClass}"></div>` : card.emoji;
+
+      el.innerHTML = `
+        ${rarityBadge}
+        ${count > 1 ? `<div class="badge-count">x${count}</div>` : ''}
+        ${card.energy > 0 ? `<div class="badge-energy">⚡${card.energy}</div>` : ''}
+        <div class="c-header"><span>${card.type}</span></div>
+        <div class="c-emoji">${spriteContent}</div>
+        <div class="c-name">${card.name}</div>
+        <div class="c-footer">
+          ${card.isTrainer ? `<span>${card.description}</span>` : `<span>❤️${Math.max(0, card.hp)}</span><span>⚔️${card.atk}</span>`}
+        </div>
+      `;
+
+      if (isTradeable && count > 0) {
+        const sellBtn = document.createElement('button');
+        sellBtn.innerText = `售 (+💎${card.value})`;
+        sellBtn.style.cssText = 'font-size:0.6rem; margin-top:2px; padding:2px; z-index:12; background:#e2e8f0; color:#d97706; border:1px solid #cbd5e1;';
+        sellBtn.onclick = (e) => { e.stopPropagation(); sellCard(card.id, card.value); };
+        el.appendChild(sellBtn);
+      }
+      return el;
+    }
+
+    function updateUI() {
+      document.getElementById('coin-count').innerText = playerData.coins;
+      const totalCards = CARD_DATABASE.length;
+      const ownedCount = Object.keys(playerData.inventory).filter(id => playerData.inventory[id] > 0).length;
+      document.getElementById('collection-count').innerText = `${ownedCount}/${totalCards}`;
+
+      const printBtn = document.getElementById('btn-print-cards');
+      if (printBtn) {
+        const isComplete = ownedCount >= totalCards;
+        printBtn.disabled = !isComplete;
+        printBtn.innerText = isComplete ? '🖨️ 列印全真修仙典籍 PDF' : `🖨️ 列印全真修仙典籍 PDF (${ownedCount}/${totalCards})`;
+      }
+    }
+
+    function switchTab(tabName) {
+      document.querySelectorAll('.nav-tabs button').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.view-container').forEach(v => v.classList.remove('active'));
+
+      document.getElementById(`tab-${tabName}`).classList.add('active');
+      document.getElementById(`view-${tabName}`).classList.add('active');
+
+      if (tabName === 'collection') renderCollection();
+      if (tabName === 'battle' && (!gameState.player || gameState.player.prizes <= 0)) initTCGBattle();
+    }
+
+    function addCoins(amt) { playerData.coins += amt; saveData(); updateUI(); }
+
+    function openPack() {
+      if (isOpeningPack) return;
+      if (playerData.coins < 10) return alert('靈石不足，無法開啟仙緣寶袋！');
+      
+      isOpeningPack = true;
+      playerData.coins -= 10;
+      saveData(); updateUI();
+
+      const packGraphic = document.getElementById('pack-graphic');
+      const btnOpen = document.getElementById('btn-open-pack');
+      
+      packGraphic.classList.add('pack-animating');
+      btnOpen.disabled = true;
+
+      setTimeout(() => {
+        packGraphic.classList.remove('pack-animating');
+        btnOpen.disabled = false;
+        isOpeningPack = false;
+
+        const drawn = [];
+        for (let i = 0; i < 3; i++) {
+          const card = CARD_DATABASE[Math.floor(Math.random() * CARD_DATABASE.length)];
+          drawn.push(card);
+          playerData.inventory[card.id] = (playerData.inventory[card.id] || 0) + 1;
+        }
+
+        saveData(); updateUI();
+
+        const modalBox = document.getElementById('drawn-cards');
+        modalBox.innerHTML = '';
+        
+        drawn.forEach((c, idx) => {
+          const cardEl = createCardDOM(c);
+          cardEl.classList.add('card-appear');
+          cardEl.style.animationDelay = `${idx * 0.15}s`;
+          cardEl.onclick = () => openInspectModal(c.id);
+          modalBox.appendChild(cardEl);
+        });
+
+        document.getElementById('result-modal').classList.add('active');
+      }, 1200);
+    }
+
+    function closeModal() { document.getElementById('result-modal').classList.remove('active'); }
+
+    function sellCard(cardId, price) {
+      if ((playerData.inventory[cardId] || 0) > 0) {
+        playerData.inventory[cardId]--;
+        playerData.coins += price;
+        saveData(); updateUI(); renderCollection();
+      }
+    }
+
+    function sellDuplicateCards() {
+      let totalEarned = 0;
+      let totalSoldCards = 0;
+
+      CARD_DATABASE.forEach(card => {
+        const ownedCount = playerData.inventory[card.id] || 0;
+        if (ownedCount > 1) {
+          const duplicates = ownedCount - 1;
+          totalEarned += duplicates * card.value;
+          totalSoldCards += duplicates;
+          playerData.inventory[card.id] = 1;
+        }
+      });
+
+      if (totalSoldCards === 0) return alert('坊市告知：道友目前無多餘重複之法寶！');
+
+      playerData.coins += totalEarned;
+      saveData(); updateUI(); renderCollection();
+      alert(`🎉 成功於坊市出售 ${totalSoldCards} 件重複法寶，獲得 💎 +${totalEarned} 靈石！`);
+    }
+
+    function openInspectModal(cardId) {
+      const card = CARD_DATABASE.find(c => c.id === cardId);
+      if (!card) return;
+
+      const container = document.getElementById('inspect-card-content');
+      const rClass = card.rarity ? `rarity-${card.rarity.toLowerCase()}` : 'rarity-c';
+      container.className = `inspect-card-box ${rClass} ${card.isTrainer ? 'trainer' : ''}`;
+      const ownedCount = playerData.inventory[card.id] || 0;
+      const spriteContent = card.spriteClass ? `<div class="card-sprite ${card.spriteClass}"></div>` : card.emoji;
+
+      container.innerHTML = `
+        <div class="inspect-header">
+          <span>屬性: ${card.type}</span>
+          <span>境界: <b>[${getXiuxianRarityText(card.rarity)}]</b></span>
+        </div>
+        <div class="inspect-emoji">${spriteContent}</div>
+        <div class="inspect-title">${card.name}</div>
+        <div class="inspect-desc">
+          ${card.isTrainer ? `<b>神通奇效:</b> ${card.description}<br><br>` : ''}
+          ${card.desc || '暫無修仙典籍記述。'}
+        </div>
+        <div class="inspect-stats">
+          ${card.isTrainer ? `<span>坊市價值: 💎${card.value}</span>` : `<span>❤️ 真元: ${card.hp}</span><span>⚔️ 威能: ${card.atk}</span><span>⚡ 靈氣: ${card.energyReq}</span>`}
+        </div>
+        <div style="font-size: 0.75rem; text-align: center; color: #64748b; margin-top: 5px; z-index: 1;">
+          萬寶囊收藏: ${ownedCount} 件
+        </div>
+        <div class="inspect-card-shine"></div>
+      `;
+
+      document.getElementById('inspect-modal').classList.add('active');
+    }
+
+    function closeInspectModal() { document.getElementById('inspect-modal').classList.remove('active'); }
+
+    function renderCollection() {
+      const grid = document.getElementById('collection-grid');
+      grid.innerHTML = '';
+      CARD_DATABASE.forEach(card => {
+        const count = playerData.inventory[card.id] || 0;
+        const cardDOM = createCardDOM(card, count, count === 0, true);
+        cardDOM.onclick = () => openInspectModal(card.id);
+        grid.appendChild(cardDOM);
+      });
+    }
+
+    function initTCGBattle() {
+      gameState = {
+        turn: 'player',
+        energyAttached: false,
+        supporterUsed: false,
+        player: { deck: createBattleDeck(), hand: [], active: null, bench: [], prizes: 3 },
+        enemy: { deck: createBattleDeck(), hand: [], active: null, bench: [], prizes: 3 }
+      };
+
+      for (let i = 0; i < 5; i++) { drawCard('player'); drawCard('enemy'); }
+
+      gameState.player.active = gameState.player.hand.find(c => !c.isTrainer && c.stage === '煉氣期') || gameState.player.hand.shift();
+      gameState.enemy.active = gameState.enemy.hand.find(c => !c.isTrainer && c.stage === '煉氣期') || gameState.enemy.hand.shift();
+
+      gameState.player.hand = gameState.player.hand.filter(c => c !== gameState.player.active);
+      gameState.enemy.hand = gameState.enemy.hand.filter(c => c !== gameState.enemy.active);
+
+      log('☯️ 仙魔論道對決開始！雙方已祭出登場法寶。');
+      startTurn('player');
+    }
+
+    function createBattleDeck() {
+      let deck = [];
+      const owned = Object.keys(playerData.inventory).filter(id => playerData.inventory[id] > 0);
+      for (let i = 0; i < 20; i++) {
+        const id = owned.length > 0 ? owned[Math.floor(Math.random() * owned.length)] : CARD_DATABASE[i].id;
+        const card = CARD_DATABASE.find(c => c.id === id);
+        deck.push({ ...card, instanceId: 'inst_' + Math.random(), energy: 0 });
+      }
+      return deck;
+    }
+
+    function drawCard(who) {
+      if (gameState[who].deck.length > 0) {
+        gameState[who].hand.push(gameState[who].deck.pop());
+      }
+    }
+
+    function startTurn(who) {
+      gameState.turn = who;
+      gameState.energyAttached = false;
+      gameState.supporterUsed = false;
+      drawCard(who);
+
+      if (who === 'player') {
+        log('👉 輪至閣下吐納！參透獲得 1 張仙卡。');
+        document.getElementById('btn-attach-energy').disabled = false;
+        document.getElementById('btn-attack').disabled = false;
+        document.getElementById('btn-end-turn').disabled = false;
+      } else {
+        log('👹 敵對邪修正在運功凝氣...');
+        document.getElementById('btn-attach-energy').disabled = true;
+        document.getElementById('btn-attack').disabled = true;
+        document.getElementById('btn-end-turn').disabled = true;
+        setTimeout(aiPlayTurn, 1000);
+      }
+      renderBattle();
+    }
+
+    function openActionModal(index) {
+      if (gameState.turn !== 'player') return;
+      const card = gameState.player.hand[index];
+      const container = document.getElementById('action-buttons-container');
+      container.innerHTML = '';
+      document.getElementById('action-card-title').innerText = `${card.emoji} ${card.name} [${getXiuxianRarityText(card.rarity)}]`;
+
+      const btnInspect = document.createElement('button');
+      btnInspect.innerText = '🔍 神識探測 (查看詳情)';
+      btnInspect.style.background = '#f1f5f9';
+      btnInspect.style.color = '#334155';
+      btnInspect.onclick = () => { closeActionModal(); openInspectModal(card.id); };
+      container.appendChild(btnInspect);
+
+      if (card.isTrainer) {
+        const btn = document.createElement('button');
+        btn.innerText = `🧪 祭出妙策：${card.description}`;
+        btn.onclick = () => { useTrainerCard(index); closeActionModal(); };
+        container.appendChild(btn);
+      } else {
+        if (card.stage === '煉氣期') {
+          const btnBench = document.createElement('button');
+          btnBench.innerText = '📥 佈置至護法備戰區';
+          btnBench.onclick = () => { playToBench(index); closeActionModal(); };
+          if (gameState.player.bench.length >= 5) btnBench.disabled = true;
+          container.appendChild(btnBench);
+        }
+      }
+      document.getElementById('action-modal').classList.add('active');
+    }
+
+    function closeActionModal() { document.getElementById('action-modal').classList.remove('active'); }
+
+    function useTrainerCard(index) {
+      if (gameState.supporterUsed) return alert('每輪吐納限用 1 次錦囊妙策！');
+      const card = gameState.player.hand[index];
+      gameState.supporterUsed = true;
+      gameState.player.hand.splice(index, 1);
+
+      if (card.effect === 'draw3') {
+        drawCard('player'); drawCard('player'); drawCard('player');
+        log('🍶 發動【掌天瓶靈液】：加速運轉，連抽 3 張仙卡！');
+      } else if (card.effect === 'heal60') {
+        if (gameState.player.active) {
+          gameState.player.active.hp = Math.min(gameState.player.active.maxHp, gameState.player.active.hp + 60);
+          log('💊 服用【培元丹】：論道場法寶回復 60 點真元！');
+        }
+      }
+      renderBattle();
+    }
+
+    function playToBench(index) {
+      const card = gameState.player.hand[index];
+      gameState.player.hand.splice(index, 1);
+      gameState.player.bench.push(card);
+      log(`📥 成功佈置 [${card.name}] 進入護法區。`);
+      renderBattle();
+    }
+
+    function actionAttachEnergy() {
+      if (gameState.energyAttached) return alert('本輪已注入過靈氣！');
+      if (!gameState.player.active) return;
+
+      gameState.player.active.energy += 1;
+      gameState.energyAttached = true;
+      log(`⚡ 為 [${gameState.player.active.name}] 灌注了 1 點天地靈氣！`);
+      document.getElementById('btn-attach-energy').disabled = true;
+      renderBattle();
+    }
+
+    function actionAttack() {
+      const p = gameState.player.active;
+      const e = gameState.enemy.active;
+      if (!p || !e) return;
+      if (p.energy < p.energyReq) return alert(`靈氣不足！施法需要 ${p.energyReq} 點靈氣。`);
+
+      document.getElementById('btn-attack').disabled = true;
+      e.hp -= p.atk;
+      log(`🗡️ [${p.name}] 發動神通，對敵修 [${e.name}] 造成 ${p.atk} 點法術威能！`);
+
+      if (e.hp <= 0) {
+        log(`💥 敵修法寶 [${e.name}] 崩毀！奪得 1 頁道果殘頁！`);
+        gameState.player.prizes -= 1;
+        gameState.enemy.active = gameState.enemy.bench.shift() || null;
+      }
+
+      if (!checkWin()) actionEndTurn();
+    }
+
+    function actionEndTurn() { startTurn('enemy'); }
+
+    function aiPlayTurn() {
+      const e = gameState.enemy;
+      if (e.active) {
+        e.active.energy += 1;
+        log(`⚡ 敵修為 [${e.active.name}] 凝聚了靈氣。`);
+      }
+
+      if (e.active && gameState.player.active && e.active.energy >= e.active.energyReq) {
+        const p = gameState.player.active;
+        p.hp -= e.active.atk;
+        log(`💥 敵修 [${e.active.name}] 施展神通，對閣下造成 ${e.active.atk} 點傷害！`);
+
+        if (p.hp <= 0) {
+          log(`☠️ 閣下的法寶 [${p.name}] 崩毀！敵修奪走 1 頁道果殘頁。`);
+          e.prizes -= 1;
+          gameState.player.active = gameState.player.bench.shift() || null;
+        }
+      }
+
+      if (!checkWin()) setTimeout(() => startTurn('player'), 800);
+    }
+
+    function checkWin() {
+      if (gameState.player.prizes <= 0 || gameState.enemy.active === null) {
+        document.getElementById('victory-modal').classList.add('active');
+        return true;
+      } else if (gameState.enemy.prizes <= 0 || gameState.player.active === null) {
+        alert('💀 閣下道行尚淺，法寶耗盡，慘敗於敵修之手！');
+        initTCGBattle();
+        return true;
+      }
+      renderBattle();
+      return false;
+    }
+
+    function rewardAndGoToShop() {
+      addCoins(30);
+      document.getElementById('victory-modal').classList.remove('active');
+      switchTab('shop');
+    }
+
+    function renderBattle() {
+      const getEl = (id) => document.getElementById(id);
+
+      if (getEl('p-prizes')) getEl('p-prizes').innerText = gameState.player.prizes;
+      if (getEl('e-prizes')) getEl('e-prizes').innerText = gameState.enemy.prizes;
+      if (getEl('p-deck-cnt')) getEl('p-deck-cnt').innerText = gameState.player.deck.length;
+      if (getEl('e-deck-cnt')) getEl('e-deck-cnt').innerText = gameState.enemy.deck.length;
+      if (getEl('e-hand-cnt')) getEl('e-hand-cnt').innerText = gameState.enemy.hand.length;
+
+      const pActiveEl = getEl('p-active');
+      if (pActiveEl) {
+        pActiveEl.innerHTML = '';
+        if (gameState.player.active) {
+          const dom = createCardDOM(gameState.player.active, 0, false, false, true);
+          dom.onclick = () => openInspectModal(gameState.player.active.id);
+          pActiveEl.appendChild(dom);
+        }
+      }
+
+      const eActiveEl = getEl('e-active');
+      if (eActiveEl) {
+        eActiveEl.innerHTML = '';
+        if (gameState.enemy.active) {
+          const dom = createCardDOM(gameState.enemy.active, 0, false, false, true);
+          dom.onclick = () => openInspectModal(gameState.enemy.active.id);
+          eActiveEl.appendChild(dom);
+        }
+      }
+
+      const pBenchEl = getEl('p-bench');
+      if (pBenchEl) {
+        pBenchEl.innerHTML = '';
+        gameState.player.bench.forEach(c => {
+          const dom = createCardDOM(c);
+          dom.onclick = () => openInspectModal(c.id);
+          pBenchEl.appendChild(dom);
+        });
+      }
+
+      const eBenchEl = getEl('e-bench');
+      if (eBenchEl) {
+        eBenchEl.innerHTML = '';
+        gameState.enemy.bench.forEach(c => {
+          const dom = createCardDOM(c);
+          dom.onclick = () => openInspectModal(c.id);
+          eBenchEl.appendChild(dom);
+        });
+      }
+
+      const pHandEl = getEl('p-hand');
+      if (pHandEl) {
+        pHandEl.innerHTML = '';
+        gameState.player.hand.forEach((card, idx) => {
+          const cardDOM = createCardDOM(card);
+          cardDOM.onclick = () => openActionModal(idx);
+          pHandEl.appendChild(cardDOM);
+        });
+      }
+    }
+
+    function log(msg) {
+      const logBox = document.getElementById('game-log');
+      if (logBox) {
+        logBox.innerHTML += msg + '<br>';
+        logBox.scrollTop = logBox.scrollHeight;
+      }
+    }
+
+    initGame();
+  </script>
+</body>
+</html>
