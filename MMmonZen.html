@@ -32,17 +32,47 @@
 
     .card-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(125px, 1fr)); gap: 10px; padding: 5px; }
 
-    /* 基本修仙卡牌樣式（白色背景） */
+    /* 基本修仙卡牌樣式（3D 視覺基礎） */
     .tcg-card {
       width: 95px; height: 135px; background: linear-gradient(145deg, #ffffff, #f8fafc); color: #0f172a; border-radius: 8px; border: 2px solid #cbd5e1;
-      display: flex; flex-direction: column; justify-space-between; padding: 5px; position: relative;
-      cursor: pointer; user-select: none; transition: transform 0.2s, border-color 0.2s, box-shadow 0.2s; flex-shrink: 0;
-      overflow: hidden; box-shadow: 0 2px 5px rgba(0,0,0,0.08);
+      display: flex; flex-direction: column; justify-content: space-between; padding: 5px; position: relative;
+      cursor: pointer; user-select: none; transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.2s; flex-shrink: 0;
+      overflow: hidden; box-shadow: 0 4px 8px rgba(0,0,0,0.1), inset 0 1px 1px rgba(255,255,255,0.8);
+      transform-style: preserve-3d;
     }
-    .tcg-card:hover { transform: translateY(-4px); box-shadow: 0 6px 12px rgba(0,0,0,0.12); }
-    .tcg-card.active-card { width: 110px; height: 155px; border-color: var(--accent-color); box-shadow: 0 0 15px rgba(217,119,6,0.3); }
+    .tcg-card:hover { transform: translateY(-6px) rotateX(4deg) scale(1.03); box-shadow: 0 12px 20px rgba(0,0,0,0.15); }
+    
+    /* 對戰主將卡牌 3D 加強效果 */
+    .tcg-card.active-card {
+      width: 110px; height: 155px; border-color: var(--accent-color);
+      box-shadow: 0 10px 25px rgba(217,119,6,0.3), inset 0 0 10px rgba(255,255,255,0.5);
+      animation: cardFloat 3s ease-in-out infinite alternate;
+    }
+    @keyframes cardFloat {
+      0% { transform: translateY(0px) rotateY(-2deg); }
+      100% { transform: translateY(-8px) rotateY(2deg); }
+    }
+
     .tcg-card.trainer { border-color: var(--trainer-color); }
-    .tcg-card.locked { filter: grayscale(100%) opacity(0.3); border-color: #cbd5e1 !important; transform: none; box-shadow: none !important; animation: none !important; }
+    .tcg-card.locked { filter: grayscale(100%) opacity(0.3); border-color: #cbd5e1 !important; transform: none !important; box-shadow: none !important; animation: none !important; }
+
+    /* ===== 動態打擊與受擊動畫 ===== */
+    .atk-anim { animation: attackImpact 0.4s ease-in-out !important; }
+    @keyframes attackImpact {
+      0% { transform: scale(1); }
+      50% { transform: scale(1.18) translateY(-15px) rotate(3deg); }
+      100% { transform: scale(1); }
+    }
+
+    .hit-anim { animation: hitShake 0.4s ease-in-out !important; }
+    @keyframes hitShake {
+      0% { transform: translate(0, 0); filter: brightness(1); }
+      20% { transform: translate(-8px, 5px) rotate(-5deg); filter: brightness(2) drop-shadow(0 0 10px red); }
+      40% { transform: translate(8px, -5px) rotate(5deg); }
+      60% { transform: translate(-5px, 3px); }
+      80% { transform: translate(5px, -3px); }
+      100% { transform: translate(0, 0); filter: brightness(1); }
+    }
 
     /* ===== CSS 精靈圖 (Sprite Sheet) ===== */
     .card-sprite {
@@ -56,7 +86,6 @@
       flex-shrink: 0;
     }
 
-    /* 精靈圖座標位移 */
     .sprite-c1  { background-position: 0% 0%; }
     .sprite-c2  { background-position: 16.666% 0%; }
     .sprite-c3  { background-position: 50% 0%; }
@@ -80,17 +109,9 @@
     
     /* ===== 修仙等級 (境界) 標籤樣式 ===== */
     .badge-rarity {
-      position: absolute;
-      top: 4px;
-      left: 4px;
-      font-size: 0.6rem;
-      font-weight: 900;
-      padding: 1px 5px;
-      border-radius: 4px;
-      z-index: 10;
-      color: #ffffff;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.3);
-      line-height: 1.2;
+      position: absolute; top: 4px; left: 4px; font-size: 0.6rem; font-weight: 900;
+      padding: 1px 5px; border-radius: 4px; z-index: 10; color: #ffffff;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.3); line-height: 1.2;
     }
     .badge-rarity.ur { background: linear-gradient(135deg, #e11d48, #9333ea); }
     .badge-rarity.ssr { background: linear-gradient(135deg, #d97706, #f59e0b); }
@@ -132,14 +153,17 @@
     .tcg-card.active-card .c-emoji { height: 55px; }
     .c-name { font-size: 0.68rem; text-align: center; font-weight: bold; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; pointer-events: none; z-index: 1; color: #0f172a; margin: 2px 0; }
     .c-footer { display: flex; justify-content: space-between; font-size: 0.6rem; background: rgba(241,245,249,0.9); color: #334155; padding: 2px 4px; border-radius: 3px; pointer-events: none; z-index: 1; font-weight: bold; }
-    .badge-energy { position: absolute; top: -6px; right: -6px; background: var(--energy-color); color: #ffffff; border-radius: 50%; width: 18px; height: 18px; font-size: 0.65rem; font-weight: bold; display: flex; align-items: center; justify-content: center; z-index: 11; }
+    .badge-energy { position: absolute; top: -6px; right: -6px; background: var(--energy-color); color: #ffffff; border-radius: 50%; width: 20px; height: 20px; font-size: 0.7rem; font-weight: bold; display: flex; align-items: center; justify-content: center; z-index: 11; box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
     .badge-count { position: absolute; bottom: 4px; right: 4px; background: var(--accent-color); color: #ffffff; border-radius: 10px; padding: 1px 6px; font-size: 0.65rem; font-weight: bold; display: flex; align-items: center; justify-content: center; z-index: 11; }
 
-    /* 論道台 (對戰區) */
-    .playmat { background: #ffffff; border: 2px solid #cbd5e1; border-radius: 12px; padding: 12px; display: flex; flex-direction: column; gap: 10px; transition: transform 0.1s; box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
+    /* 論道台 (對戰區 Perspective 3D 舞台) */
+    .playmat { background: #ffffff; border: 2px solid #cbd5e1; border-radius: 12px; padding: 12px; display: flex; flex-direction: column; gap: 10px; transition: transform 0.1s; box-shadow: 0 4px 12px rgba(0,0,0,0.05); perspective: 1000px; }
     .field-section { display: flex; flex-direction: column; gap: 6px; background: #f8fafc; padding: 8px; border-radius: 8px; border: 1px solid #e2e8f0; }
-    .bench-grid { display: flex; gap: 8px; min-height: 100px; background: #ffffff; padding: 4px; border-radius: 6px; border: 1px dashed #cbd5e1; overflow-x: auto; align-items: center; }
-    .active-spot { display: flex; justify-content: center; align-items: center; min-height: 140px; }
+    .bench-grid { display: flex; gap: 8px; min-height: 100px; background: #ffffff; padding: 6px; border-radius: 6px; border: 1px dashed #cbd5e1; overflow-x: auto; align-items: center; }
+    
+    /* 3D 戰鬥主將舞台 */
+    .active-spot { display: flex; justify-content: center; align-items: center; min-height: 165px; perspective: 600px; }
+
     .hand-container { display: flex; gap: 8px; overflow-x: auto; padding: 6px; background: #f1f5f9; border-radius: 8px; min-height: 140px; border: 1px solid #e2e8f0; }
     .zone-title { font-size: 0.75rem; color: #64748b; font-weight: bold; }
 
@@ -151,7 +175,7 @@
     .modal-menu { background: #ffffff; padding: 20px; border-radius: 12px; border: 1px solid #cbd5e1; max-width: 320px; width: 90%; text-align: center; box-shadow: 0 10px 25px rgba(0,0,0,0.15); }
     .modal-menu button { width: 100%; margin-top: 8px; padding: 10px; }
 
-    /* 法寶檢視視窗 */
+    /* 法寶檢視視窗 (3D 透視舞台) */
     .inspect-card-stage { perspective: 1200px; margin-bottom: 15px; }
     .inspect-card-box {
       width: 220px; height: 320px; background: #ffffff; color: #0f172a; border: 3px solid var(--accent-color);
@@ -167,6 +191,7 @@
     .inspect-desc { background: #f8fafc; padding: 8px; border-radius: 6px; font-size: 0.8rem; color: #334155; text-align: center; position: relative; z-index: 1; border: 1px solid #e2e8f0; }
     .inspect-stats { display: flex; justify-content: space-around; background: #f1f5f9; padding: 8px; border-radius: 6px; font-size: 0.85rem; font-weight: bold; color: #0f172a; position: relative; z-index: 1; }
 
+    /* 3D 動態雷射反光層 */
     .inspect-card-shine {
       position: absolute; inset: 0; z-index: 2; pointer-events: none; border-radius: 9px;
       background: radial-gradient(circle at 50% 50%, rgba(255,255,255,0.6), rgba(255,255,255,0) 60%);
@@ -263,7 +288,7 @@
   <!-- 2. 萬寶囊 -->
   <main id="view-collection" class="view-container">
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; background: #ffffff; padding: 10px 15px; border-radius: 8px; border: 1px solid #cbd5e1; flex-wrap: wrap; gap: 10px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
-      <span style="color: #64748b; font-size: 0.85rem;">💡 點擊卡牌可檢視法寶神通，多餘重複法寶可於坊市出售 (每種固定保留1張)</span>
+      <span style="color: #64748b; font-size: 0.85rem;">💡 點擊卡牌可檢視法寶神通 (支援3D旋繞視角)，多餘重複法寶可於坊市出售</span>
       <div style="display:flex; gap:8px; flex-wrap:wrap;">
         <button onclick="sellDuplicateCards()" style="background: var(--accent-color); color: #fff; font-weight: bold; border: none; padding: 8px 15px; border-radius: 6px;">
           💎 坊市一鍵變現重複法寶
@@ -333,6 +358,7 @@
     </div>
   </div>
 
+  <!-- 法寶 3D 檢視視窗 -->
   <div id="inspect-modal" class="modal">
     <div id="inspect-card-stage" class="inspect-card-stage">
       <div id="inspect-card-content" class="inspect-card-box"></div>
@@ -391,6 +417,7 @@
         saveData();
       }
       updateUI();
+      setup3DEffect();
     }
 
     function saveData() { localStorage.setItem('xiuxian_tcg_full_v1', JSON.stringify(playerData)); }
@@ -442,7 +469,7 @@
       }
     }
 
-    /* 核心修正：正確產生卡牌 DOM 與階級標籤 */
+    /* 生成具備 3D 浮雕感的卡牌 DOM */
     function createCardDOM(card, count = 0, isLocked = false, isTradeable = false, isActive = false) {
       const el = document.createElement('div');
       const rKey = (card.rarity || 'C').toLowerCase();
@@ -473,6 +500,39 @@
         el.appendChild(sellBtn);
       }
       return el;
+    }
+
+    /* 檢視視窗 3D 旋轉效果 */
+    function setup3DEffect() {
+      const stage = document.getElementById('inspect-card-stage');
+      const box = document.getElementById('inspect-card-content');
+
+      if (!stage || !box) return;
+
+      stage.addEventListener('mousemove', (e) => {
+        const rect = stage.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
+
+        const centerX = rect.width / 2;
+        const centerY = rect.height / 2;
+
+        const rotateX = ((y - centerY) / centerY) * -18;
+        const rotateY = ((x - centerX) / centerX) * 18;
+
+        box.style.transform = `rotateX(${rotateX}deg) rotateY(${rotateY}deg) scale(1.03)`;
+
+        const shine = box.querySelector('.inspect-card-shine');
+        if (shine) {
+          const percentX = (x / rect.width) * 100;
+          const percentY = (y / rect.height) * 100;
+          shine.style.background = `radial-gradient(circle at ${percentX}% ${percentY}%, rgba(255,255,255,0.7), rgba(255,255,255,0) 60%)`;
+        }
+      });
+
+      stage.addEventListener('mouseleave', () => {
+        box.style.transform = `rotateX(0deg) rotateY(0deg) scale(1)`;
+      });
     }
 
     function updateUI() {
@@ -606,6 +666,7 @@
         <div class="inspect-card-shine"></div>
       `;
 
+      container.style.transform = `rotateX(0deg) rotateY(0deg) scale(1)`;
       document.getElementById('inspect-modal').classList.add('active');
     }
 
@@ -751,6 +812,7 @@
       renderBattle();
     }
 
+    /* 包含 3D 打擊與受擊特效的攻擊邏輯 */
     function actionAttack() {
       const p = gameState.player.active;
       const e = gameState.enemy.active;
@@ -758,16 +820,29 @@
       if (p.energy < p.energyReq) return alert(`靈氣不足！施法需要 ${p.energyReq} 點靈氣。`);
 
       document.getElementById('btn-attack').disabled = true;
-      e.hp -= p.atk;
-      log(`🗡️ [${p.name}] 發動神通，對敵修 [${e.name}] 造成 ${p.atk} 點法術威能！`);
 
-      if (e.hp <= 0) {
-        log(`💥 敵修法寶 [${e.name}] 崩毀！奪得 1 頁道果殘頁！`);
-        gameState.player.prizes -= 1;
-        gameState.enemy.active = gameState.enemy.bench.shift() || null;
-      }
+      // 觸發攻擊與受擊 3D 動畫
+      const pActiveEl = document.querySelector('#p-active .tcg-card');
+      const eActiveEl = document.querySelector('#e-active .tcg-card');
 
-      if (!checkWin()) actionEndTurn();
+      if (pActiveEl) pActiveEl.classList.add('atk-anim');
+      if (eActiveEl) eActiveEl.classList.add('hit-anim');
+
+      setTimeout(() => {
+        if (pActiveEl) pActiveEl.classList.remove('atk-anim');
+        if (eActiveEl) eActiveEl.classList.remove('hit-anim');
+
+        e.hp -= p.atk;
+        log(`🗡️ [${p.name}] 發動神通，對敵修 [${e.name}] 造成 ${p.atk} 點法術威能！`);
+
+        if (e.hp <= 0) {
+          log(`💥 敵修法寶 [${e.name}] 崩毀！奪得 1 頁道果殘頁！`);
+          gameState.player.prizes -= 1;
+          gameState.enemy.active = gameState.enemy.bench.shift() || null;
+        }
+
+        if (!checkWin()) actionEndTurn();
+      }, 400);
     }
 
     function actionEndTurn() { startTurn('enemy'); }
@@ -781,17 +856,29 @@
 
       if (e.active && gameState.player.active && e.active.energy >= e.active.energyReq) {
         const p = gameState.player.active;
-        p.hp -= e.active.atk;
-        log(`💥 敵修 [${e.active.name}] 施展神通，對閣下造成 ${e.active.atk} 點傷害！`);
+        const eActiveEl = document.querySelector('#e-active .tcg-card');
+        const pActiveEl = document.querySelector('#p-active .tcg-card');
 
-        if (p.hp <= 0) {
-          log(`☠️ 閣下的法寶 [${p.name}] 崩毀！敵修奪走 1 頁道果殘頁。`);
-          e.prizes -= 1;
-          gameState.player.active = gameState.player.bench.shift() || null;
-        }
+        if (eActiveEl) eActiveEl.classList.add('atk-anim');
+        if (pActiveEl) pActiveEl.classList.add('hit-anim');
+
+        setTimeout(() => {
+          if (eActiveEl) eActiveEl.classList.remove('atk-anim');
+          if (pActiveEl) pActiveEl.classList.remove('hit-anim');
+
+          p.hp -= e.active.atk;
+          log(`💥 敵修 [${e.active.name}] 施展神通，對閣下造成 ${e.active.atk} 點傷害！`);
+
+          if (p.hp <= 0) {
+            log(`☠️ 閣下的法寶 [${p.name}] 崩毀！敵修奪走 1 頁道果殘頁。`);
+            e.prizes -= 1;
+            gameState.player.active = gameState.player.bench.shift() || null;
+          }
+          if (!checkWin()) setTimeout(() => startTurn('player'), 600);
+        }, 400);
+      } else {
+        if (!checkWin()) setTimeout(() => startTurn('player'), 800);
       }
-
-      if (!checkWin()) setTimeout(() => startTurn('player'), 800);
     }
 
     function checkWin() {
